@@ -7,39 +7,36 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js",
-    "start:railway": "npx prisma migrate deploy && npx prisma generate && node server.js",
-    "build": "npx prisma generate",
-    "postinstall": "prisma generate",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev --name init",
-    "db:push": "prisma db push",
-    "db:reset": "prisma migrate reset --force",
-    "db:studio": "prisma studio",
-    "db:seed": "node prisma/seed.js",
-    "db:seed:prod": "node seed-prod.js",
-    "db:setup": "npm run db:push && npm run db:seed",
-    "db:deploy": "npx prisma migrate deploy && npm run db:seed",
-    "test": "node test-routes.js"
+    "dev":          "nodemon server.js",
+    "start":        "node server.js",
+    "build":        "npx prisma generate",
+    "postinstall":  "prisma generate",
+    "db:generate":  "prisma generate",
+    "db:push":      "prisma db push",
+    "db:migrate":   "prisma migrate dev --name init",
+    "db:reset":     "prisma migrate reset --force",
+    "db:studio":    "prisma studio",
+    "db:seed":      "node prisma/seed.js",
+    "db:setup":     "npm run db:push && npm run db:seed",
+    "test":         "node test-routes.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
+    "bcryptjs":        "^2.4.3",
+    "cors":            "^2.8.5",
+    "express":         "^4.19.2",
     "express-rate-limit": "^8.6.2",
-    "groq-sdk": "^1.5.0",
-    "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "pdfkit": "^0.15.0"
+    "groq-sdk":        "^1.5.0",
+    "helmet":          "^7.1.0",
+    "jsonwebtoken":    "^9.0.2",
+    "morgan":          "^1.10.0",
+    "pdfkit":          "^0.15.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4",
-    "prisma": "5.22.0"
+    "prisma":  "5.22.0"
   }
 }

@@ -1,267 +1,163 @@
-# S2R2 Inventory — Backend
+# S2R2 Inventory — Backend API
 
-**Express 4 + Prisma 5 + PostgreSQL 17**  
-Built by Civitas Atlas Technologies Pvt. Ltd., Pune  
-Contact: civitasatlasco@gmail.com
+Express.js + Prisma + PostgreSQL
+Built by **Civitas Atlas Technologies Pvt. Ltd., Pune, India**
 
 ---
 
-## Quick Start
+## Setup
 
-```powershell
-cd backend
+### 1. Create local database
+
+Run once as postgres superuser:
+
+```bash
+# Using psql
+psql -U postgres -h 127.0.0.1 -f setup-local-db.sql
+
+# Or on Windows PowerShell
+.\create-local-db.ps1
+```
+
+This creates:
+- User: `s2r2_user` / password: `s2r2pass`
+- Database: `s2r2_inventory`
+
+---
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+The default `.env` works out of the box for local PostgreSQL.
+Only change `JWT_SECRET` and `GROQ_API_KEY` if needed.
+
+---
+
+### 3. Install and run
+
+```bash
 npm install
-npm run db:push    # sync schema to PostgreSQL
-npm run db:seed    # seed users + sample data + BOM
-npm run dev        # start dev server on :4000
-```
-
-Verify: `GET http://localhost:4000/health`
-
----
-
-## Performance & Optimization
-
-**Tested:** 5 concurrent users (3 ADMIN, 2 EDITOR)  
-- 30 requests in 1.03s  
-- 0 conflicts / race conditions  
-- Avg response: 41ms (min 6ms, max 274ms)  
-- 100% success rate
-
-**Database:** Transaction isolation level `READ COMMITTED` prevents race conditions  
-**Concurrency:** Prisma connection pooling handles multiple simultaneous requests  
-**Security:** JWT tokens, bcrypt passwords, role-based access control
-
----
-
-## Tech Stack
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| express | 4.x | HTTP framework |
-| @prisma/client | 5.x | PostgreSQL ORM |
-| jsonwebtoken | 9.x | JWT auth tokens |
-| bcryptjs | 2.x | Password hashing |
-| groq-sdk | latest | Civi AI (decision intelligence) |
-| pdfkit | 0.x | PDF report generation |
-| cors | 2.x | Cross-origin resource sharing |
-| helmet | 7.x | HTTP security headers |
-| morgan | 1.x | HTTP request logging |
-| xlsx | 0.x | Excel import parsing |
-
----
-
-## Environment Variables (`backend/.env`)
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OWNER_SIG` | ✅ Yes | Ownership HMAC signature — **do not change** |
-| `DATABASE_URL` | ✅ Yes | PostgreSQL connection string |
-| `JWT_SECRET` | ✅ Yes | JWT signing secret |
-| `PORT` | No | API port (default: `4000`) |
-| `FRONTEND_URL` | ✅ Yes | Frontend origin for CORS |
-| `TRIAL_LICENSE_KEY` | ✅ Yes | License key (contact civitasatlasco@gmail.com) |
-| `TRIAL_ENABLED` | No | `false` = fully licensed, no expiry |
-| `GROQ_API_KEY` | No | Groq API key for Civi AI narrative |
-
-Example `DATABASE_URL`:
-```
-postgresql://s2r2_user:s2r2pass@localhost:5432/s2r2_inventory
+npm run db:setup    # creates tables + seeds all data
+npm run dev         # starts server on :4000
 ```
 
 ---
 
 ## Scripts
 
-| Command | What it does |
-|---------|-------------|
-| `npm run dev` | Start with nodemon (auto-restart on changes) |
-| `npm run start` | Start production server |
-| `npm run db:push` | Apply Prisma schema to DB (no migration files) |
-| `npm run db:seed` | Seed users, raw materials, products, clients, BOM |
-| `npm run db:studio` | Open Prisma Studio GUI at `http://localhost:5555` |
+| Script            | What it does                              |
+|-------------------|-------------------------------------------|
+| `npm run dev`     | Dev server with nodemon (auto-restart)    |
+| `npm run start`   | Production server                         |
+| `npm run db:push` | Sync Prisma schema → DB (no migrations)   |
+| `npm run db:migrate` | Create + apply a named migration       |
+| `npm run db:seed` | Seed users, materials, products, clients  |
+| `npm run db:setup`| db:push + db:seed (first-time setup)      |
+| `npm run db:reset`| Wipe all tables and re-seed               |
+| `npm run db:studio` | Open Prisma Studio GUI on :5555         |
+| `npm run build`   | Generate Prisma client                    |
+| `npm run test`    | Run API route tests                       |
 
 ---
 
-## Project Structure
+## API Routes
 
-```
-backend/
-├── server.js                  # App entry point — middleware + route registration
-├── .env                       # Environment variables (not in git)
-├── package.json
-├── prisma/
-│   ├── schema.prisma          # DB schema (models, enums, relations)
-│   └── seed.js                # Seed script
-└── src/
-    ├── middleware/
-    │   ├── auth.js            # requireAuth, requireRole
-    │   ├── trial.js           # License key + plan expiry check
-    │   └── integrity.js       # Ownership HMAC startup + runtime check
-    └── routes/
-        ├── auth.js            # POST /api/auth/login
-        ├── rawMaterials.js    # CRUD + Inward + Outward + Import + PDF export
-        ├── finishedProducts.js# CRUD + Import + PDF export
-        ├── clients.js         # CRUD + Import + PDF export
-        ├── dashboard.js       # Stats aggregation
-        ├── manufacture.js     # BOM CRUD, feasibility, produce, transactions
-        ├── intelligence.js    # Civi AI: reorder, readiness, replenishment, PDF, chat
-        ├── activity.js        # Paginated activity log
-        ├── iotDevices.js      # IoT CRUD + ping
-        ├── users.js           # User management (ADMIN only)
-        └── trial.js           # POST /api/trial/activate
-```
-
----
-
-## API Reference
-
-Base URL: `http://localhost:4000`  
-Protected routes require: `Authorization: Bearer <jwt_token>`
-
-### Auth
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| POST | `/api/auth/login` | No | Login → returns JWT + username + role |
-
-### Raw Materials
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/raw-materials` | Yes | List (search, category, status filters) |
-| GET | `/api/raw-materials/:id` | Yes | Single item |
-| POST | `/api/raw-materials` | Yes | Create |
-| PUT | `/api/raw-materials/:id` | Yes | Update |
-| DELETE | `/api/raw-materials/:id` | Yes | Delete |
-| POST | `/api/raw-materials/:id/inward` | Yes | Add stock (receive) |
-| POST | `/api/raw-materials/:id/outward` | Yes | Reduce stock (issue) |
-| POST | `/api/raw-materials/import` | Yes | Bulk Excel import |
-| GET | `/api/raw-materials/export/pdf` | Yes | PDF report |
-
-### Finished Products
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/finished-products` | Yes | List (search, status, stockStatus filters) |
-| GET | `/api/finished-products/:id` | Yes | Single product |
-| POST | `/api/finished-products` | Yes | Create |
-| PUT | `/api/finished-products/:id` | Yes | Update |
-| DELETE | `/api/finished-products/:id` | Yes | Delete |
-| POST | `/api/finished-products/import` | Yes | Bulk Excel import |
-| GET | `/api/finished-products/export/pdf` | Yes | PDF report |
-
-### Bill of Materials & Manufacture
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/manufacture/bom/all` | Yes | All BOMs for all products |
-| GET | `/api/manufacture/bom/:id` | Yes | BOM for one product |
-| POST | `/api/manufacture/bom/:id` | Yes | Set/replace BOM entries |
-| GET | `/api/manufacture/feasibility/:id?qty=N` | Yes | Check if N units can be produced |
-| POST | `/api/manufacture/inward` | Yes | Inward stock (raw or finished) |
-| POST | `/api/manufacture/outward` | Yes | Outward dispatch (finished products) |
-| POST | `/api/manufacture/produce` | Yes | Manufacture — deducts raw materials via BOM |
-| GET | `/api/manufacture/transactions` | Yes | Paginated transaction history |
-
-### Civi AI — Decision Intelligence
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/intelligence` | Yes | Full intelligence data + Groq AI narrative |
-| GET | `/api/intelligence/export/pdf` | Yes | Detailed PDF report |
-| POST | `/api/intelligence/chat` | Yes | Civi AI chat assistant (Groq) |
-
-### Clients
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/clients` | Yes | List |
-| POST | `/api/clients` | Yes | Create |
-| PUT | `/api/clients/:id` | Yes | Update |
-| DELETE | `/api/clients/:id` | Yes | Delete |
-| POST | `/api/clients/import` | Yes | Bulk Excel import |
-| GET | `/api/clients/export/pdf` | Yes | PDF report |
-
-### IoT Devices
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/iot-devices` | Yes | List |
-| POST | `/api/iot-devices` | Yes | Create |
-| PUT | `/api/iot-devices/:id` | Yes | Update |
-| DELETE | `/api/iot-devices/:id` | Yes | Delete |
-| PATCH | `/api/iot-devices/:id/ping` | Yes | Update last ping |
-
-### Users (ADMIN only)
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/users` | ADMIN | List all users |
-| GET | `/api/users/me` | Yes | Current user info |
-| POST | `/api/users` | ADMIN | Create user |
-| PUT | `/api/users/:id` | ADMIN | Update user |
-| DELETE | `/api/users/:id` | ADMIN | Delete user |
-
-### System
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/health` | No | Health check + trial status |
-| POST | `/api/trial/activate` | No | Activate license key |
+| Method | Path                              | Description                  |
+|--------|-----------------------------------|------------------------------|
+| POST   | /api/auth/login                   | Login, returns JWT           |
+| GET    | /api/raw-materials                | List raw materials            |
+| POST   | /api/raw-materials                | Create raw material           |
+| PUT    | /api/raw-materials/:id            | Update raw material           |
+| DELETE | /api/raw-materials/:id            | Delete raw material           |
+| POST   | /api/raw-materials/:id/inward     | Add stock                    |
+| POST   | /api/raw-materials/:id/outward    | Remove stock                 |
+| GET    | /api/raw-materials/export/pdf     | Export PDF                   |
+| POST   | /api/raw-materials/import         | Bulk import from Excel rows  |
+| GET    | /api/finished-products            | List finished products        |
+| POST   | /api/finished-products            | Create finished product       |
+| PUT    | /api/finished-products/:id        | Update finished product       |
+| DELETE | /api/finished-products/:id        | Delete finished product       |
+| GET    | /api/manufacture/bom/:id          | Get BOM for product           |
+| POST   | /api/manufacture/bom/:id          | Set BOM entries               |
+| GET    | /api/manufacture/bom/all          | All BOMs                      |
+| GET    | /api/manufacture/feasibility/:id  | Check if manufacture possible |
+| POST   | /api/manufacture/inward           | Stock inward                  |
+| POST   | /api/manufacture/outward          | Stock outward                 |
+| POST   | /api/manufacture/produce          | Manufacture (deduct BOM)      |
+| GET    | /api/manufacture/transactions     | Transaction history           |
+| GET    | /api/clients                      | List clients                  |
+| POST   | /api/clients                      | Create client                 |
+| PUT    | /api/clients/:id                  | Update client                 |
+| DELETE | /api/clients/:id                  | Delete client                 |
+| GET    | /api/dashboard/stats              | Full dashboard data           |
+| GET    | /api/activity                     | Paginated activity log        |
+| DELETE | /api/activity                     | Clear activity log (ADMIN)    |
+| GET    | /api/iot-devices                  | List IoT devices              |
+| POST   | /api/iot-devices                  | Add device (ADMIN)            |
+| PATCH  | /api/iot-devices/:id/ping         | Ping device                   |
+| GET    | /api/users                        | List users (ADMIN)            |
+| POST   | /api/users                        | Create user (ADMIN)           |
+| PUT    | /api/users/:id                    | Update user (ADMIN)           |
+| DELETE | /api/users/:id                    | Delete user (ADMIN)           |
+| GET    | /api/intelligence                 | Full AI intelligence report   |
+| POST   | /api/intelligence/chat            | Chat with Civi AI             |
+| GET    | /api/intelligence/export/pdf      | Export intelligence PDF       |
+| POST   | /api/trial/activate               | Activate license key          |
+| GET    | /health                           | Health + trial status         |
 
 ---
 
-## Middleware Stack (request order)
+## Environment Variables
+
+| Variable           | Required | Description                            |
+|--------------------|----------|----------------------------------------|
+| `DATABASE_URL`     | Yes      | PostgreSQL connection string           |
+| `JWT_SECRET`       | Yes      | JWT signing secret                     |
+| `FRONTEND_URL`     | Yes      | Allowed CORS origin                    |
+| `OWNER_SIG`        | Yes      | Ownership HMAC — do not change         |
+| `PORT`             | No       | Server port (default: 4000)            |
+| `NODE_ENV`         | No       | development / production               |
+| `GROQ_API_KEY`     | No       | Groq AI key for Civi AI narrative      |
+| `TRIAL_LICENSE_KEY`| No       | License key (or set TRIAL_ENABLED=false)|
+
+---
+
+## Database Schema
+
+8 tables:
 
 ```
-Request
-  → helmet()              — security headers
-  → cors()                — CORS (FRONTEND_URL)
-  → express.json()        — parse JSON body
-  → morgan("dev")         — request logging
-  → req.prisma = prisma   — inject DB client
-  → /api/trial/*          — license activation (always allowed)
-  → checkIntegrity()      — ownership check (503 if tampered)
-  → checkTrial()          — license expiry (402 if expired)
-  → route handlers
-  → global error handler
+users                  — authentication, roles
+raw_materials          — input inventory
+finished_products      — output inventory
+bill_of_materials      — component requirements per product
+inventory_transactions — audit log of all stock movements
+clients                — customer records
+iot_devices            — IoT device registry
+activity_logs          — user action audit trail
 ```
 
 ---
 
-## Integrity Protection
+## Seed Data
 
-The server refuses to start if:
-- Any required env var (`OWNER_SIG`, `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`) is missing
-- `OWNER_SIG` doesn't match the expected SHA-256 HMAC
-- PostgreSQL is unreachable
+Running `npm run db:seed` creates:
 
-On every request, the same checks run — tampering at runtime returns `503 INTEGRITY_VIOLATION`.
+- 8 users (3 ADMIN + 5 EDITOR)
+- 24 raw materials (6 core + 18 BOM-specific)
+- 5 finished products (Iotzee, Display, Display Stand, Hold-on Hold Kit, IoT Tracking Device)
+- 5 complete BOMs
+- 9 real clients
 
----
-
-## Response Conventions
-
-All error responses:
-```json
-{ "error": "Human-readable message" }
-```
-
-All success responses: resource object or `{ items/products/clients/... }` array.
-
-HTTP status codes:
-- `200` — success
-- `201` — created
-- `400` — bad request (missing/invalid fields)
-- `401` — unauthenticated
-- `402` — trial expired (`TRIAL_EXPIRED`)
-- `403` — forbidden (wrong role or invalid license key)
-- `422` — business logic error (e.g. insufficient stock)
-- `503` — integrity violation
+Safe to re-run — all upserts, live stock quantities never overwritten.
 
 ---
 
-## Login Credentials (after `npm run db:seed`)
+## Ownership
 
-| Username | Password | Role |
-|----------|----------|------|
-| `sandeep` | `Sandeep@2025` | ADMIN |
-| `rohan` | `Rohan@2025` | ADMIN |
-| `akshay` | `Akshay@2025` | ADMIN |
-| `emp1`–`emp5` | `Emp1@2025`–`Emp5@2025` | EDITOR |
-
----
-
-*© Civitas Atlas Technologies Pvt. Ltd., Pune, India*
+This software is the property of **Civitas Atlas Technologies Pvt. Ltd.**
+civitasatlasco@gmail.com
+Unauthorised modification or redistribution is prohibited.
