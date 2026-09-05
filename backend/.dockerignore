@@ -1,0 +1,23 @@
+# Never copy env files into the Docker image
+.env
+.env.*
+*.env
+
+# Dev deps / local tools
+node_modules
+npm-debug.log*
+
+# Local DB scripts
+create-local-db.ps1
+run-after-db-created.ps1
+setup-local-db.sql
+
+# Test files
+stress-test.js
+test-routes.js
+verify-users.js
+test-connection.js
+
+# Git
+.git
+.gitignore
