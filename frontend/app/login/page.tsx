@@ -32,11 +32,6 @@ function LoginForm() {
       nav.replace("/");
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
-      if (e.code === "TRIAL_EXPIRED") {
-        localStorage.setItem("s2r2_trial_expired", "1");
-        nav.replace("/trial-expired");
-        return;
-      }
       setError("Invalid username or password. Please try again.");
       setPassword("");
     } finally {

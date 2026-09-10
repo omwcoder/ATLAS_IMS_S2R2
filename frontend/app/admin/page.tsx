@@ -6,8 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import AppShell from "@/components/AppShell";
 import { getUsers, createUser, updateUser, deleteUser } from "@/lib/api";
 import { AppUser, UserRole } from "@/types";
-import { ShieldCheck, UserPlus, Pencil, Trash2, X, RefreshCw, Key, Users, Shield, Eye, FilePen, Save, Clock, CalendarDays, AlertTriangle as AlertTri } from "lucide-react";
-import { useTrialStatus } from "@/lib/useTrialStatus";
+import { ShieldCheck, UserPlus, Pencil, Trash2, X, RefreshCw, Key, Users, Shield, Eye, FilePen, Save } from "lucide-react";
 // ─── Role display config ────────────────────────────────────
 const ROLES: { value: UserRole; label: string; desc: string; cls: string }[] = [
   { value: "ADMIN",  label: "Admin",  desc: "Full access — manage users, edit all data", cls: "bg-red-50  text-red-700  dark:bg-red-900/30  dark:text-red-300  border border-red-200  dark:border-red-800"  },
@@ -74,7 +73,6 @@ export default function AdminPage() {
 
   const myRole = typeof window !== "undefined" ? localStorage.getItem("s2r2_role") || "" : "";
   const isAdmin = myRole === "ADMIN";
-  const trial = useTrialStatus();
 
   useEffect(() => { setPerms(loadPerms()); }, []);
 
@@ -156,143 +154,6 @@ export default function AdminPage() {
             </button>
           )}
         </div>
-
-        {/* ── Trial / License status card (admin only) ──── */}
-        {trial && (
-          <div className={[
-            "card p-5 border-l-4",
-            trial.expired
-              ? "border-red-500 bg-red-50 dark:bg-red-900/10"
-              : trial.daysRemaining <= 7
-              ? "border-red-400 bg-red-50 dark:bg-red-900/10"
-              : trial.daysRemaining <= 30
-              ? "border-amber-400 bg-amber-50 dark:bg-amber-900/10"
-              : "border-blue-500 bg-blue-50 dark:bg-blue-900/10",
-          ].join(" ")}>
-
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              {/* Left — plan info */}
-              <div className="flex items-start gap-3">
-                <div className={[
-                  "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
-                  trial.expired ? "bg-red-100 dark:bg-red-900/30" : "bg-blue-100 dark:bg-blue-900/30",
-                ].join(" ")}>
-                  <Clock size={20} className={trial.expired ? "text-red-600" : "text-blue-600"} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2 flex-wrap">
-                    License &amp; Trial Status
-                    {!trial.enabled && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        Fully Licensed
-                      </span>
-                    )}
-                    {trial.enabled && !trial.expired && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 capitalize">
-                        {trial.mode}
-                      </span>
-                    )}
-                    {trial.expired && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        Expired
-                      </span>
-                    )}
-                  </p>
-
-                  {/* Expiry date + time */}
-                  {trial.enabled && trial.expiresAt && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1.5">
-                      <CalendarDays size={12} />
-                      {trial.expired ? "Expired on" : "Expires on"}:{" "}
-                      <span className="font-semibold text-gray-700 dark:text-gray-300">
-                        {trial.expiresAt.toLocaleDateString("en-IN", {
-                          weekday: "short", day: "numeric", month: "long", year: "numeric",
-                        })}
-                        {" at "}
-                        {trial.expiresAt.toLocaleTimeString("en-IN", {
-                          hour: "2-digit", minute: "2-digit", hour12: true,
-                        })}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Right — countdown */}
-              {trial.enabled && !trial.expired && (
-                <div className="flex flex-wrap gap-3 shrink-0">
-                  {/* Days pill */}
-                  <div className={[
-                    "flex flex-col items-center justify-center px-4 py-2 rounded-xl min-w-[80px]",
-                    trial.daysRemaining <= 7
-                      ? "bg-red-500 text-white"
-                      : trial.daysRemaining <= 30
-                      ? "bg-amber-400 text-gray-900"
-                      : "bg-blue-600 text-white",
-                  ].join(" ")}>
-                    <span className="text-2xl font-black leading-none">{trial.daysRemaining}</span>
-                    <span className="text-[10px] font-semibold uppercase tracking-wide mt-0.5">
-                      {trial.daysRemaining === 1 ? "Day" : "Days"} Left
-                    </span>
-                  </div>
-
-                  {/* Hours pill */}
-                  <div className="flex flex-col items-center justify-center px-4 py-2 rounded-xl min-w-[80px]
-                                  bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <span className="text-2xl font-black leading-none text-gray-800 dark:text-white">
-                      {trial.hoursRemaining}
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-wide mt-0.5 text-gray-500 dark:text-gray-400">
-                      {trial.hoursRemaining === 1 ? "Hour" : "Hours"} Left
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Next plan tier guidance */}
-            {trial.enabled && !trial.expired && (
-              <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
-                {trial.mode === "1-month plan" && (
-                  <>
-                    After this plan ends, upgrade to{" "}
-                    <span className="font-semibold text-blue-600 dark:text-blue-400">6-month pilot</span>
-                    {" "}(expires 19 Feb 2027) or{" "}
-                    <span className="font-semibold text-blue-600 dark:text-blue-400">1-year plan</span>
-                    {" "}(expires 19 Aug 2027).{" "}
-                  </>
-                )}
-                {trial.mode === "6-month plan" && (
-                  <>
-                    After this plan ends, upgrade to the{" "}
-                    <span className="font-semibold text-blue-600 dark:text-blue-400">1-year annual plan</span>
-                    {" "}(expires 19 Aug 2027).{" "}
-                  </>
-                )}
-                {trial.mode === "1-year plan" && (
-                  <>Annual plan active — valid until 19 Aug 2027. Contact us before expiry to renew.{" "}</>
-                )}
-                <a
-                  href="mailto:civitasatlasco@gmail.com?subject=S2R2%20License%20Renewal"
-                  className="underline text-blue-600 dark:text-blue-400 font-medium"
-                >
-                  Contact Civitas Atlas
-                </a>
-              </div>
-            )}
-
-            {/* Expired warning */}
-            {trial.enabled && trial.expired && (
-              <div className="mt-4 pt-3 border-t border-red-200 dark:border-red-800 flex items-center gap-2 text-xs text-red-700 dark:text-red-400">
-                <AlertTri size={13} className="shrink-0" />
-                Trial has ended. Enter a renewal license key on the lock screen or contact{" "}
-                <a href="mailto:civitasatlasco@gmail.com" className="underline font-medium">
-                  civitasatlasco@gmail.com
-                </a>
-              </div>
-            )}
-          </div>
-        )}
 
         {!isAdmin && (          <div className="card p-10 text-center text-gray-400">
             <ShieldCheck size={48} className="mx-auto mb-3 opacity-30" />

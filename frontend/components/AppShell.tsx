@@ -129,14 +129,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted,          setMounted]          = useState(false);
 
-  // Auth + trial guard
+  // Auth guard
   useEffect(() => {
     if (!isLoggedIn()) {
       router.replace("/login");
-      return;
-    }
-    if (localStorage.getItem("s2r2_trial_expired") === "1") {
-      router.replace("/trial-expired");
       return;
     }
     setMounted(true);

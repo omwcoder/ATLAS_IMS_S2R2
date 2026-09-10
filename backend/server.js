@@ -30,7 +30,9 @@ const { runIntegrityCheck, checkIntegrity } = require("./src/middleware/integrit
 
 // ── App setup ─────────────────────────────────────────────────
 const app    = express();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+});
 const PORT   = process.env.PORT || 4000;
 
 // FRONTEND_URL — warn if missing but never crash; defaults to localhost:3000
@@ -49,7 +51,11 @@ app.use(cors({
 }));
 app.use(requestSizeLimit);
 app.use(express.json({ limit: '10mb' }));
-app.use(morgan("dev"));
+app.use(morgan(process.env.NODE_ENV === "production"
+  ? "combined"
+  : "dev",
+  { skip: (req) => req.path === "/health" } // don't log health checks
+));
 app.use(validateRequest);
 
 // Attach Prisma to every request

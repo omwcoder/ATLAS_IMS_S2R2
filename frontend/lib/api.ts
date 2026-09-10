@@ -28,13 +28,7 @@ async function request<T>(
     throw new Error("Unauthorised");
   }
 
-  // 402 — trial / license expired
-  // Skip redirect if the user just activated a key (flag set by trial-expired page)
-  if (res.status === 402) {
-    localStorage.removeItem("s2r2_trial_unlocked"); // clear stale flag
-    window.location.href = "/trial-expired";
-    throw new Error("Trial expired");
-  }
+  // 402 handling removed — app is fully licensed, no trial gate
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -46,8 +40,6 @@ async function request<T>(
 
 // ── Auth ──────────────────────────────────────────────────────
 export async function login(username: string, password: string) {
-  // Login calls /api/auth/login which is exempt from the trial guard,
-  // but we still handle TRIAL_EXPIRED here in case it ever surfaces.
   const res = await fetch(`${BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -55,12 +47,6 @@ export async function login(username: string, password: string) {
   });
 
   const body = await res.json().catch(() => ({}));
-
-  if (res.status === 402 || body.code === "TRIAL_EXPIRED") {
-    const err = new Error(body.error || "Trial period has ended") as Error & { code: string };
-    err.code = "TRIAL_EXPIRED";
-    throw err;
-  }
 
   if (!res.ok) {
     throw new Error(body.error || `HTTP ${res.status}`);
