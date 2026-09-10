@@ -1,7 +1,7 @@
-FROM node:20-alpine
+FROM node:20-slim
 
-# Install OpenSSL — required by Prisma query engine on Alpine
-RUN apk add --no-cache openssl libc6-compat
+# Install OpenSSL — required by Prisma on Debian slim
+RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies and pre-generate Prisma client
+# Install dependencies and generate Prisma client
 RUN npm ci && npx prisma generate
 
 # Copy the rest of the source code
