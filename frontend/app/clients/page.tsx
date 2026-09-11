@@ -31,6 +31,14 @@ function fmtTs(d?: string | null): string {
          `${p(dt.getHours())}:${p(dt.getMinutes())}:${p(dt.getSeconds())}`;
 }
 
+/** Convert ISO string → datetime-local input value (YYYY-MM-DDTHH:MM) */
+function toDatetimeLocal(d?: string | null): string {
+  if (!d) return new Date(new Date().getTime() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return toDatetimeLocal(null);
+  return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+}
+
 // ─── export helpers ────────────────────────────────────────────
 const BRAND = "Generated using Civi API | By Civitas Atlas Co, Pune";
 
@@ -114,6 +122,7 @@ const EMPTY: Omit<Client, "id" | "createdAt" | "updatedAt"> = {
 
 export default function ClientsPage() {
   const { canAdd, canEdit, canDelete } = usePermissions("client");
+  const isAdmin = typeof window !== "undefined" && localStorage.getItem("s2r2_role") === "ADMIN";
   // ─── list state ────────────────────────────────────────────
   const [clients,  setClients]  = useState<Client[]>([]);
   const [filtered, setFiltered] = useState<Client[]>([]);
@@ -554,19 +563,32 @@ export default function ClientsPage() {
                   <option value="INACTIVE">Inactive</option>
                 </select>
               </Field>
-              {/* Read-only timestamps — shown only when editing */}
-              {!isNew && (modal as Partial<Client>).createdAt && (
-                <div className="md:col-span-2 grid grid-cols-2 gap-3 pt-1 border-t border-gray-100 dark:border-gray-700">
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Created At</p>
-                    <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<Client>).createdAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Today&apos;s Date</p>
-                    <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs(new Date().toISOString())}</p>
-                  </div>
+              {/* Timestamps — editable for ADMIN, read-only for others */}
+              <div className="md:col-span-2 grid grid-cols-2 gap-3 pt-1 border-t border-gray-100 dark:border-gray-700">
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">
+                    Created At {isAdmin && !isNew && <span className="text-blue-500 normal-case">(editable)</span>}
+                  </p>
+                  {isAdmin && !isNew ? (
+                    <input
+                      type="datetime-local"
+                      className="form-input text-xs font-mono"
+                      value={toDatetimeLocal((modal as Partial<Client>).createdAt)}
+                      onChange={e => setModal({ ...modal, createdAt: e.target.value ? new Date(e.target.value).toISOString() : undefined } as Partial<Client>)}
+                    />
+                  ) : (
+                    <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                      {isNew ? fmtTs(new Date().toISOString()) : fmtTs((modal as Partial<Client>).createdAt)}
+                    </p>
+                  )}
                 </div>
-              )}
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Today&apos;s Date</p>
+                  <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                    {fmtTs(new Date().toISOString())}
+                  </p>
+                </div>
+              </div>
               <div className="md:col-span-2 flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
                 <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
                 <button type="submit" disabled={saving} className="btn-primary">

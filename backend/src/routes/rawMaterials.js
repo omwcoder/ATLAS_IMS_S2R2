@@ -202,7 +202,13 @@ router.put("/:id", requireAuth, async (req, res, next) => {
       if (req.body[f] !== undefined)
         data[f] = ["quantity","minStock","price"].includes(f) ? Number(req.body[f]) : req.body[f];
     }
-    data.lastUpdated = new Date();
+    // ADMIN can override lastUpdated — otherwise default to now
+    if (req.body.lastUpdated && req.user.role === "ADMIN") {
+      const d = new Date(req.body.lastUpdated);
+      data.lastUpdated = isNaN(d.getTime()) ? new Date() : d;
+    } else {
+      data.lastUpdated = new Date();
+    }
     const item = await req.prisma.rawMaterial.update({ where: { id }, data });
     await logActivity(req.prisma, req.user.username, "raw_material", item.name, "updated");
     res.json({ ...item, status: deriveStatus(item) });

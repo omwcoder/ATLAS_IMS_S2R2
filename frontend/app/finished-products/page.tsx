@@ -38,6 +38,14 @@ function fmtTs(d?: string | null): string {
   return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} ` +
          `${p(dt.getHours())}:${p(dt.getMinutes())}:${p(dt.getSeconds())}`;
 }
+
+/** Convert ISO string → datetime-local input value (YYYY-MM-DDTHH:MM) */
+function toDatetimeLocal(d?: string | null): string {
+  if (!d) return new Date(new Date().getTime() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return toDatetimeLocal(null);
+  return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+}
 const BRAND = "Generated using Civi API | By Civitas Atlas Co, Pune";
 async function xlsxExport(rows: Record<string, unknown>[], sheet: string, file: string) {
   const XLSX = await import("xlsx");
@@ -113,6 +121,7 @@ type ActionModal =
 
 export default function FinishedProductsPage() {
   const { canAdd, canEdit, canDelete } = usePermissions("finished-product");
+  const isAdmin = typeof window !== "undefined" && localStorage.getItem("s2r2_role") === "ADMIN";
   const [products,     setProducts]     = useState<FinishedProduct[]>([]);
   const [filtered,     setFiltered]     = useState<FinishedProduct[]>([]);
   const [search,       setSearch]       = useState("");
@@ -690,23 +699,32 @@ export default function FinishedProductsPage() {
                       <option value="HOLD">Hold</option>
                     </select>
                   </Field>
-                  {/* Read-only timestamps — shown only when editing */}
-                  {!isNew && ((modal as Partial<FinishedProduct>).createdAt || (modal as Partial<FinishedProduct>).updatedAt) && (
-                    <div className="grid grid-cols-2 gap-3 pt-1 border-t border-gray-100 dark:border-gray-700">
-                      {(modal as Partial<FinishedProduct>).createdAt && (
-                        <div>
-                          <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Created At</p>
-                          <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<FinishedProduct>).createdAt)}</p>
-                        </div>
-                      )}
-                      {(modal as Partial<FinishedProduct>).updatedAt && (
-                        <div>
-                          <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Updated At</p>
-                          <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<FinishedProduct>).updatedAt)}</p>
-                        </div>
+                  {/* Timestamps — editable for ADMIN, read-only for others */}
+                  <div className="grid grid-cols-2 gap-3 pt-1 border-t border-gray-100 dark:border-gray-700">
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">
+                        Updated At {isAdmin && !isNew && <span className="text-blue-500 normal-case">(editable)</span>}
+                      </p>
+                      {isAdmin && !isNew ? (
+                        <input
+                          type="datetime-local"
+                          className="form-input text-xs font-mono"
+                          value={toDatetimeLocal((modal as Partial<FinishedProduct>).updatedAt)}
+                          onChange={e => setModal({ ...modal, updatedAt: e.target.value ? new Date(e.target.value).toISOString() : undefined } as Partial<FinishedProduct>)}
+                        />
+                      ) : (
+                        <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                          {isNew ? fmtTs(new Date().toISOString()) : fmtTs((modal as Partial<FinishedProduct>).updatedAt)}
+                        </p>
                       )}
                     </div>
-                  )}
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Created At</p>
+                      <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                        {isNew ? fmtTs(new Date().toISOString()) : fmtTs((modal as Partial<FinishedProduct>).createdAt)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-100 dark:border-gray-700 shrink-0">
                   <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>

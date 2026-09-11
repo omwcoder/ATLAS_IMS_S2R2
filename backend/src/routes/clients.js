@@ -80,6 +80,11 @@ router.put("/:id", requireAuth, async (req, res, next) => {
         data[f] = f === "status" ? req.body[f].toUpperCase() : req.body[f];
       }
     }
+    // ADMIN can override createdAt
+    if (req.body.createdAt && req.user.role === "ADMIN") {
+      const d = new Date(req.body.createdAt);
+      if (!isNaN(d.getTime())) data.createdAt = d;
+    }
     const client = await req.prisma.client.update({ where: { id }, data });
     await logActivity(req.prisma, req.user.username, "client", client.clientName, "updated");
     res.json(client);

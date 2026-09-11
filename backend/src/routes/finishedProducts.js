@@ -224,7 +224,11 @@ router.put("/:id", requireAuth, async (req, res, next) => {
     if (req.body.minStock !== undefined) data.minStock = Number(req.body.minStock);
     if (req.body.price    !== undefined) data.price    = Number(req.body.price);
     if (req.body.status   !== undefined) data.status   = req.body.status.toUpperCase();
-
+    // ADMIN can override updatedAt
+    if (req.body.updatedAt && req.user.role === "ADMIN") {
+      const d = new Date(req.body.updatedAt);
+      if (!isNaN(d.getTime())) data.updatedAt = d;
+    }
     const product = await req.prisma.finishedProduct.update({ where: { id }, data });
     await logActivity(req.prisma, req.user.username, "finished_product", product.name, "updated");
     res.json(serialize(product));

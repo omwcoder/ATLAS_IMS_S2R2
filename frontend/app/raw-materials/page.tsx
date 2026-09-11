@@ -35,6 +35,14 @@ function fmtTs(d?: string | null): string {
   return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} ` +
          `${p(dt.getHours())}:${p(dt.getMinutes())}:${p(dt.getSeconds())}`;
 }
+
+/** Convert ISO string → datetime-local input value (YYYY-MM-DDTHH:MM) */
+function toDatetimeLocal(d?: string | null): string {
+  if (!d) return new Date(new Date().getTime() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return toDatetimeLocal(null);
+  return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+}
 const BRAND = "Generated using Civi API | By Civitas Atlas Co, Pune";
 
 async function xlsxExport(rows: Record<string, unknown>[], sheet: string, file: string) {
@@ -99,6 +107,7 @@ type ImportState = "idle" | "preview" | "importing" | "done";
 
 export default function RawMaterialsPage() {
   const { canAdd, canEdit, canDelete } = usePermissions("raw-material");
+  const isAdmin = typeof window !== "undefined" && localStorage.getItem("s2r2_role") === "ADMIN";
   const [items,    setItems]    = useState<RawMaterial[]>([]);
   const [filtered, setFiltered] = useState<RawMaterial[]>([]);
   const [search,   setSearch]   = useState("");
@@ -591,21 +600,32 @@ export default function RawMaterialsPage() {
                   <textarea rows={3} value={modal.description ?? ""} onChange={e => setModal({ ...modal, description: e.target.value })} className="form-input resize-none" placeholder="Optional…"/>
                 </Field>
               </div>
-              {/* Read-only timestamps — shown only when editing */}
-              {!isNew && ((modal as Partial<RawMaterial>).lastUpdated || (modal as Partial<RawMaterial>).createdAt) && (
+              {/* Timestamps — editable for ADMIN, read-only for others */}
+              {(!isNew || isAdmin) && (
                 <div className="md:col-span-2 grid grid-cols-2 gap-4 pt-1 border-t border-gray-100 dark:border-gray-700">
-                  {(modal as Partial<RawMaterial>).lastUpdated && (
-                    <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Last Updated</p>
-                      <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<RawMaterial>).lastUpdated)}</p>
-                    </div>
-                  )}
-                  {(modal as Partial<RawMaterial>).createdAt && (
-                    <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Created At</p>
-                      <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<RawMaterial>).createdAt)}</p>
-                    </div>
-                  )}
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">
+                      Last Updated {isAdmin && <span className="text-blue-500 normal-case">(editable)</span>}
+                    </p>
+                    {isAdmin ? (
+                      <input
+                        type="datetime-local"
+                        className="form-input text-xs font-mono"
+                        value={toDatetimeLocal((modal as Partial<RawMaterial>).lastUpdated)}
+                        onChange={e => setModal({ ...modal, lastUpdated: e.target.value ? new Date(e.target.value).toISOString() : undefined } as typeof modal)}
+                      />
+                    ) : (
+                      <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                        {fmtTs((modal as Partial<RawMaterial>).lastUpdated)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Created At</p>
+                    <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                      {isNew ? fmtTs(new Date().toISOString()) : fmtTs((modal as Partial<RawMaterial>).createdAt)}
+                    </p>
+                  </div>
                 </div>
               )}
               <div className="md:col-span-2 flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
