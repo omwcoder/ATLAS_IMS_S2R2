@@ -31,8 +31,13 @@ function LoginForm() {
       await login(username.trim(), password);
       nav.replace("/");
     } catch (err: unknown) {
-      const e = err as Error & { code?: string };
-      setError("Invalid username or password. Please try again.");
+      const msg = err instanceof Error ? err.message : "Login failed";
+      // Show the real error — helps diagnose network vs credential issues
+      if (msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("401") || msg.toLowerCase().includes("credentials")) {
+        setError("Invalid username or password. Please check and try again.");
+      } else {
+        setError(`Login failed: ${msg}. Check your connection and try again.`);
+      }
       setPassword("");
     } finally {
       setLoading(false);

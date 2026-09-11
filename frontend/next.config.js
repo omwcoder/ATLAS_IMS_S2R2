@@ -10,18 +10,19 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
-  // Proxy /api/* and /health → Express backend
-  // In dev: http://localhost:4000
-  // Change NEXT_PUBLIC_API_URL in .env.local to point elsewhere
+  // Proxy /api/* and /health → Express backend at runtime
+  // NEXT_PUBLIC_API_URL must be set in Vercel env vars for production
+  // Defaults to http://localhost:4000 for local dev
   async rewrites() {
+    const backend = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
     return [
       {
         source:      "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/:path*`,
+        destination: `${backend}/api/:path*`,
       },
       {
         source:      "/health",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/health`,
+        destination: `${backend}/health`,
       },
     ];
   },

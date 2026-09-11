@@ -40,22 +40,36 @@ async function request<T>(
 
 // ── Auth ──────────────────────────────────────────────────────
 export async function login(username: string, password: string) {
-  const res = await fetch(`${BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
+  // Use AbortController timeout so login doesn't hang silently if backend is unreachable
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-  const body = await res.json().catch(() => ({}));
+  try {
+    const res = await fetch(`${BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+      signal: controller.signal,
+    });
 
-  if (!res.ok) {
-    throw new Error(body.error || `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+
+    localStorage.setItem("s2r2_token",    body.token);
+    localStorage.setItem("s2r2_username", body.username);
+    localStorage.setItem("s2r2_role",     body.role);
+    return body as { token: string; username: string; role: string };
+  } catch (err: unknown) {
+    if ((err as Error).name === "AbortError") {
+      throw new Error("Connection timeout — backend unreachable. Check NEXT_PUBLIC_API_URL.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  localStorage.setItem("s2r2_token",    body.token);
-  localStorage.setItem("s2r2_username", body.username);
-  localStorage.setItem("s2r2_role",     body.role);
-  return body as { token: string; username: string; role: string };
 }
 
 export function logout() {
