@@ -17,41 +17,54 @@ async function logActivity(prisma, username, module, label, action) {
 }
 
 // ── Helpers shared by both PDF routes ─────────────────────────
+
+/** Format any date value as YYYY-MM-DD HH:MM:SS (local time) */
+function fmtTs(d) {
+  if (!d) return "—";
+  const dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt.getTime())) return "—";
+  const pad = n => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ` +
+         `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+}
+
 function buildPdf(PDFDocument, items, generatedBy) {
-  const doc    = new PDFDocument({ margin: 40, size: "A4" });
+  const doc    = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
   const cols   = [
-    { label: "ID",       key: "id",          w: 28  },
-    { label: "Name",     key: "name",         w: 100 },
-    { label: "Category", key: "category",     w: 75  },
-    { label: "Qty",      key: "quantity",     w: 40  },
-    { label: "Unit",     key: "unit",         w: 35  },
-    { label: "Supplier", key: "supplier",     w: 80  },
-    { label: "Location", key: "location",     w: 70  },
-    { label: "Min",      key: "minStock",     w: 32  },
-    { label: "Price ₹",  key: "price",        w: 55  },
-    { label: "Status",   key: "status",       w: 50  },
+    { label: "ID",          key: "id",          w: 25  },
+    { label: "Name",        key: "name",         w: 90  },
+    { label: "Category",    key: "category",     w: 70  },
+    { label: "Qty",         key: "quantity",     w: 35  },
+    { label: "Unit",        key: "unit",         w: 30  },
+    { label: "Supplier",    key: "supplier",     w: 75  },
+    { label: "Location",    key: "location",     w: 65  },
+    { label: "Min",         key: "minStock",     w: 28  },
+    { label: "Price ₹",     key: "price",        w: 50  },
+    { label: "Status",      key: "status",       w: 45  },
+    { label: "Last Updated",key: "lastUpdated",  w: 105 },
+    { label: "Created At",  key: "createdAt",    w: 105 },
   ];
   const ROW_H  = 18;
   const startX = doc.page.margins.left;
   const totalW = cols.reduce((s, c) => s + c.w, 0);
 
-  doc.fontSize(18).font("Helvetica-Bold")
+  doc.fontSize(16).font("Helvetica-Bold")
      .text("S2R2 — Raw Materials", { align: "center" });
   doc.fontSize(9).font("Helvetica").fillColor("#666")
-     .text(`Generated: ${new Date().toLocaleString()}  |  By: ${generatedBy}`, { align: "center" });
+     .text(`Generated: ${fmtTs(new Date())}  |  By: ${generatedBy}`, { align: "center" });
   doc.moveDown(1.2);
 
   // Header row
   let x = startX;
   doc.rect(startX, doc.y, totalW, ROW_H).fill("#1d4ed8");
-  doc.fontSize(7).font("Helvetica-Bold");
+  doc.fontSize(6.5).font("Helvetica-Bold");
   cols.forEach(col => {
     doc.fillColor("#fff").text(col.label, x + 3, doc.y - ROW_H + 5, { width: col.w - 6, lineBreak: false });
     x += col.w;
   });
   doc.moveDown(0.2);
 
-  doc.font("Helvetica").fontSize(6.5);
+  doc.font("Helvetica").fontSize(6);
   items.forEach((item, idx) => {
     if (doc.y > doc.page.height - doc.page.margins.bottom - ROW_H) doc.addPage();
     const rowY  = doc.y;
@@ -60,8 +73,9 @@ function buildPdf(PDFDocument, items, generatedBy) {
     x = startX;
     cols.forEach(col => {
       let val = item[col.key] ?? "—";
-      if (col.key === "price")  val = `${Number(val).toLocaleString()}`;
-      if (col.key === "status") val = String(val).toUpperCase();
+      if (col.key === "price")        val = `${Number(val).toLocaleString()}`;
+      if (col.key === "status")       val = String(val).toUpperCase();
+      if (col.key === "lastUpdated" || col.key === "createdAt") val = fmtTs(val);
       doc.fillColor("#111").text(String(val), x + 3, rowY + 5, { width: col.w - 6, lineBreak: false });
       x += col.w;
     });
@@ -70,7 +84,6 @@ function buildPdf(PDFDocument, items, generatedBy) {
 
   // ── Branding footer on every page ─────────────────────────
   const brandText = "Generated using Civi API  |  By Civitas Atlas Co, Pune";
-  const pageCount = doc.bufferedPageRange ? doc.bufferedPageRange().count : 1;
   const range     = doc.bufferedPageRange ? doc.bufferedPageRange() : { start: 0, count: 1 };
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);

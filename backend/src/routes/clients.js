@@ -6,6 +6,16 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
+/** Format any date value as YYYY-MM-DD HH:MM:SS (local time) */
+function fmtTs(d) {
+  if (!d) return "—";
+  const dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt.getTime())) return "—";
+  const pad = n => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ` +
+         `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+}
+
 async function logActivity(prisma, username, module, label, action) {
   await prisma.activityLog.create({
     data: { module, label, action, username },
@@ -140,23 +150,26 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
     res.setHeader("Content-Type",        "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="clients.pdf"');
 
-    const doc = new PDFDocument({ margin: 40, size: "A4" });
+    const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
     doc.pipe(res);
 
     // ── Title ──────────────────────────────────────────────────
     doc.fontSize(18).font("Helvetica-Bold").text("S2R2 — Client List", { align: "center" });
     doc.fontSize(9).font("Helvetica").fillColor("#666")
-      .text(`Generated: ${new Date().toLocaleString()}  |  By: ${req.user.username}`, { align: "center" });
+      .text(`Generated: ${fmtTs(new Date())}  |  By: ${req.user.username}`, { align: "center" });
     doc.moveDown(1.2);
 
     // ── Column definitions ──────────────────────────────────────
     const cols = [
-      { label: "#",       key: "id",          w: 30  },
-      { label: "Name",    key: "clientName",  w: 110 },
-      { label: "Company", key: "companyName", w: 115 },
-      { label: "Phone",   key: "phone",       w: 85  },
-      { label: "Email",   key: "email",       w: 145 },
-      { label: "Status",  key: "status",      w: 55  },
+      { label: "#",          key: "id",          w: 28  },
+      { label: "Name",       key: "clientName",  w: 100 },
+      { label: "Company",    key: "companyName", w: 100 },
+      { label: "Phone",      key: "phone",       w: 80  },
+      { label: "Email",      key: "email",       w: 130 },
+      { label: "GST No",     key: "gstNo",       w: 90  },
+      { label: "Status",     key: "status",      w: 45  },
+      { label: "Created At", key: "createdAt",   w: 105 },
+      { label: "Updated At", key: "updatedAt",   w: 105 },
     ];
     const ROW_H  = 18;
     const startX = doc.page.margins.left;
@@ -165,7 +178,7 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
     // Header row
     let x = startX;
     doc.rect(startX, doc.y, totalW, ROW_H).fill("#2563eb");
-    doc.fontSize(8).font("Helvetica-Bold");
+    doc.fontSize(6.5).font("Helvetica-Bold");
     cols.forEach(col => {
       doc.fillColor("#fff").text(col.label, x + 4, doc.y - ROW_H + 4, {
         width: col.w - 8, lineBreak: false,
@@ -175,7 +188,7 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
     doc.moveDown(0.2);
 
     // Data rows
-    doc.font("Helvetica").fontSize(7);
+    doc.font("Helvetica").fontSize(6);
     clients.forEach((client, idx) => {
       if (doc.y > doc.page.height - doc.page.margins.bottom - ROW_H) doc.addPage();
       const rowY  = doc.y;
@@ -183,7 +196,8 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
       doc.rect(startX, rowY, totalW, ROW_H).fill(shade);
       x = startX;
       cols.forEach(col => {
-        const val = String(client[col.key] ?? "—");
+        let val = String(client[col.key] ?? "—");
+        if (col.key === "createdAt" || col.key === "updatedAt") val = fmtTs(client[col.key]);
         doc.fillColor("#111").text(val, x + 4, rowY + 5, {
           width: col.w - 8, lineBreak: false,
         });

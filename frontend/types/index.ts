@@ -13,6 +13,8 @@ export interface RawMaterial {
   price:       number;
   status:      "active" | "low" | "out";
   lastUpdated: string;
+  createdAt:   string;
+  updatedAt:   string;
 }
 
 export interface FinishedProduct {
@@ -27,6 +29,8 @@ export interface FinishedProduct {
   price:       number;
   status:      "ACTIVE" | "HOLD";
   stockStatus: "active" | "low" | "out";
+  createdAt:   string;
+  updatedAt:   string;
 }
 
 export interface Client {
@@ -39,6 +43,7 @@ export interface Client {
   gstNo:       string;
   status:      "ACTIVE" | "INACTIVE";
   createdAt:   string;
+  updatedAt:   string;
 }
 
 // ── Bill of Materials ─────────────────────────────────────────

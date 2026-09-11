@@ -6,6 +6,16 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
+/** Format any date value as YYYY-MM-DD HH:MM:SS (local time) */
+function fmtTs(d) {
+  if (!d) return "—";
+  const dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt.getTime())) return "—";
+  const pad = n => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ` +
+         `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+}
+
 async function logActivity(prisma, username, module, label, action) {
   await prisma.activityLog.create({ data: { module, label, action, username } });
 }
@@ -100,16 +110,18 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
 
     const doc  = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
     const cols = [
-      { label: "ID",        key: "id",        w: 35  },
-      { label: "Name",      key: "name",      w: 130 },
-      { label: "Qty",       key: "qty",       w: 45  },
-      { label: "Unit",      key: "unit",      w: 55  },
-      { label: "Category",  key: "category",  w: 110 },
-      { label: "Location",  key: "location",  w: 100 },
-      { label: "Supplier",  key: "supplier",  w: 100 },
-      { label: "Min Stock", key: "minStock",  w: 60  },
-      { label: "Price (₹)", key: "price",     w: 70  },
-      { label: "Status",    key: "status",    w: 60  },
+      { label: "ID",          key: "id",        w: 30  },
+      { label: "Name",        key: "name",      w: 110 },
+      { label: "Qty",         key: "qty",       w: 38  },
+      { label: "Unit",        key: "unit",      w: 45  },
+      { label: "Category",    key: "category",  w: 90  },
+      { label: "Location",    key: "location",  w: 80  },
+      { label: "Supplier",    key: "supplier",  w: 80  },
+      { label: "Min Stock",   key: "minStock",  w: 50  },
+      { label: "Price (₹)",   key: "price",     w: 60  },
+      { label: "Status",      key: "status",    w: 50  },
+      { label: "Created At",  key: "createdAt", w: 105 },
+      { label: "Updated At",  key: "updatedAt", w: 105 },
     ];
     const ROW_H  = 18;
     const startX = doc.page.margins.left;
@@ -118,13 +130,13 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
     doc.fontSize(16).font("Helvetica-Bold")
        .text("S2R2 — Finished Products", { align: "center" });
     doc.fontSize(9).font("Helvetica").fillColor("#666")
-       .text(`Generated: ${new Date().toLocaleString()}  |  By: ${req.user.username}`, { align: "center" });
+       .text(`Generated: ${fmtTs(new Date())}  |  By: ${req.user.username}`, { align: "center" });
     doc.moveDown(1.2);
 
     // header row
     let x = startX;
     doc.rect(startX, doc.y, totalW, ROW_H).fill("#059669");
-    doc.fontSize(8).font("Helvetica-Bold");
+    doc.fontSize(6.5).font("Helvetica-Bold");
     cols.forEach(col => {
       doc.fillColor("#fff").text(col.label, x + 4, doc.y - ROW_H + 4, { width: col.w - 8, lineBreak: false });
       x += col.w;
@@ -132,7 +144,7 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
     doc.moveDown(0.2);
 
     // data rows
-    doc.font("Helvetica").fontSize(7);
+    doc.font("Helvetica").fontSize(6);
     products.forEach((p, idx) => {
       if (doc.y > doc.page.height - doc.page.margins.bottom - ROW_H) doc.addPage();
       const rowY  = doc.y;
@@ -140,7 +152,8 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
       doc.rect(startX, rowY, totalW, ROW_H).fill(shade);
       x = startX;
       cols.forEach(col => {
-        const val = col.key === "minStock" ? (p.minStock ?? 0) : (p[col.key] ?? "—");
+        let val = col.key === "minStock" ? (p.minStock ?? 0) : (p[col.key] ?? "—");
+        if (col.key === "createdAt" || col.key === "updatedAt") val = fmtTs(val);
         doc.fillColor("#111").text(String(val), x + 4, rowY + 5, { width: col.w - 8, lineBreak: false });
         x += col.w;
       });

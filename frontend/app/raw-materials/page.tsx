@@ -25,6 +25,16 @@ function downloadBlob(blob: Blob, filename: string) {
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
+
+/** Format any date string as YYYY-MM-DD HH:MM:SS */
+function fmtTs(d?: string | null): string {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "—";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} ` +
+         `${p(dt.getHours())}:${p(dt.getMinutes())}:${p(dt.getSeconds())}`;
+}
 const BRAND = "Generated using Civi API | By Civitas Atlas Co, Pune";
 
 async function xlsxExport(rows: Record<string, unknown>[], sheet: string, file: string) {
@@ -59,7 +69,7 @@ async function downloadImportTemplate() {
     "raw-materials-import-template.xlsx");
 }
 
-const EMPTY: Omit<RawMaterial, "id" | "status" | "lastUpdated"> = {
+const EMPTY: Omit<RawMaterial, "id" | "status" | "lastUpdated" | "createdAt" | "updatedAt"> = {
   name: "", category: "Electronics", description: "", quantity: 0,
   unit: "pcs", supplier: "", location: "", minStock: 0, price: 0,
 };
@@ -239,6 +249,8 @@ export default function RawMaterialsPage() {
         Unit: i.unit, Supplier: i.supplier ?? "", Location: i.location ?? "",
         "Min Stock": i.minStock, "Price (₹)": i.price,
         "Stock Value (₹)": i.quantity * i.price, Status: i.status,
+        "Last Updated": fmtTs(i.lastUpdated),
+        "Created At":   fmtTs(i.createdAt),
       }));
       const csv = BRAND + "\n\n" + Papa.unparse(rows);
       downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8;" }), "raw-materials.csv");
@@ -384,6 +396,8 @@ export default function RawMaterialsPage() {
               ID: i.id, Name: i.name, Category: i.category, Qty: i.quantity, Unit: i.unit,
               Supplier: i.supplier ?? "", Location: i.location ?? "", "Min Stock": i.minStock,
               "Price (₹)": i.price, "Stock Value (₹)": i.quantity * i.price, Status: i.status,
+              "Last Updated": fmtTs(i.lastUpdated),
+              "Created At":   fmtTs(i.createdAt),
             })), "Raw Materials", "raw-materials.xlsx")}
               className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700 gap-1"><FileSpreadsheet size={12}/>Excel</button>
             <button onClick={() => pdfExport(token)} className="btn btn-sm bg-red-600 text-white hover:bg-red-700 gap-1"><Download size={12}/>PDF</button>
@@ -455,6 +469,7 @@ export default function RawMaterialsPage() {
                       <p className="font-bold text-purple-600 dark:text-purple-400">₹{(item.quantity * item.price).toLocaleString("en-IN")}</p>
                     </div>
                   </div>
+                  <p className="text-[10px] text-gray-400 font-mono mb-2">Updated: {fmtTs(item.lastUpdated)}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {canEdit && <>
                       <button onClick={() => openStock("inward", item)}
@@ -491,6 +506,8 @@ export default function RawMaterialsPage() {
                     <TH col="price"    label="Price"     />
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Stock Value</th>
                     <TH col="status"   label="Status"    />
+                    <TH col="lastUpdated" label="Last Updated" />
+                    <TH col="createdAt"   label="Created At"   />
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
@@ -507,6 +524,8 @@ export default function RawMaterialsPage() {
                       <td className="font-semibold text-emerald-600 dark:text-emerald-400">₹{item.price.toLocaleString("en-IN")}</td>
                       <td className="font-semibold text-purple-600 dark:text-purple-400">₹{(item.quantity * item.price).toLocaleString("en-IN")}</td>
                       <td><StatusBadge status={item.status} /></td>
+                      <td className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono">{fmtTs(item.lastUpdated)}</td>
+                      <td className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono">{fmtTs(item.createdAt)}</td>
                       <td>
                         <div className="flex gap-1 flex-wrap">
                           {canEdit && <>
@@ -572,6 +591,23 @@ export default function RawMaterialsPage() {
                   <textarea rows={3} value={modal.description ?? ""} onChange={e => setModal({ ...modal, description: e.target.value })} className="form-input resize-none" placeholder="Optional…"/>
                 </Field>
               </div>
+              {/* Read-only timestamps — shown only when editing */}
+              {!isNew && ((modal as Partial<RawMaterial>).lastUpdated || (modal as Partial<RawMaterial>).createdAt) && (
+                <div className="md:col-span-2 grid grid-cols-2 gap-4 pt-1 border-t border-gray-100 dark:border-gray-700">
+                  {(modal as Partial<RawMaterial>).lastUpdated && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Last Updated</p>
+                      <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<RawMaterial>).lastUpdated)}</p>
+                    </div>
+                  )}
+                  {(modal as Partial<RawMaterial>).createdAt && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Created At</p>
+                      <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<RawMaterial>).createdAt)}</p>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="md:col-span-2 flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
                 <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
                 <button type="submit" disabled={saving} className="btn-primary">

@@ -21,6 +21,16 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/** Format any date string as YYYY-MM-DD HH:MM:SS */
+function fmtTs(d?: string | null): string {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "—";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} ` +
+         `${p(dt.getHours())}:${p(dt.getMinutes())}:${p(dt.getSeconds())}`;
+}
+
 // ─── export helpers ────────────────────────────────────────────
 const BRAND = "Generated using Civi API | By Civitas Atlas Co, Pune";
 
@@ -29,7 +39,8 @@ function clientRows(list: Client[]) {
     ID: c.id, "Client Name": c.clientName, Company: c.companyName ?? "",
     Phone: c.phone ?? "", Email: c.email ?? "", Address: c.address ?? "",
     "GST No": c.gstNo ?? "", Status: c.status,
-    Created: new Date(c.createdAt).toLocaleDateString(),
+    "Created At": fmtTs(c.createdAt),
+    "Updated At": fmtTs(c.updatedAt),
   }));
 }
 function exportCsv(list: Client[]) {
@@ -97,7 +108,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 type ImportRow = { "Client Name": string; Company?: string; Phone?: string; Email?: string; Address?: string; "GST No"?: string; [k: string]: string | undefined };
 type ImportState = "idle" | "preview" | "importing" | "done";
 
-const EMPTY: Omit<Client, "id" | "createdAt"> = {
+const EMPTY: Omit<Client, "id" | "createdAt" | "updatedAt"> = {
   clientName: "", companyName: "", phone: "", email: "", address: "", gstNo: "", status: "ACTIVE",
 };
 
@@ -326,8 +337,8 @@ export default function ClientsPage() {
                   </div>
                 </div>
                 <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex items-center justify-between">
-                  <span className="text-[10px] text-gray-400 uppercase font-semibold">
-                    {new Date(c.createdAt).toLocaleDateString()}
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    {fmtTs(c.createdAt)}
                   </span>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     {canEdit && <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-100 transition" title="Edit"><Pencil size={13}/></button>}
@@ -341,7 +352,7 @@ export default function ClientsPage() {
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="data-table">
-                <thead><tr>{["ID","Client Name","Company","Phone","Email","Address","GST No","Status","Created","Actions"].map(h => <th key={h}>{h}</th>)}</tr></thead>
+                <thead><tr>{["ID","Client Name","Company","Phone","Email","Address","GST No","Status","Created At","Actions"].map(h => <th key={h}>{h}</th>)}</tr></thead>
                 <tbody>
                   {filtered.map(c => (
                     <tr key={c.id}>
@@ -351,7 +362,7 @@ export default function ClientsPage() {
                       <td className="max-w-[160px] truncate">{c.email || "—"}</td>
                       <td>{c.address || "—"}</td><td className="text-xs">{c.gstNo || "—"}</td>
                       <td><StatusBadge status={c.status} /></td>
-                      <td className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</td>
+                      <td className="text-xs text-gray-400 font-mono whitespace-nowrap">{fmtTs(c.createdAt)}</td>
                       <td><div className="flex gap-1.5">
                         {canEdit && <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-100 transition" title="Edit"><Pencil size={12}/></button>}
                         {canDelete && <button onClick={() => handleDelete(c.id, c.clientName)} className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 hover:bg-red-100 transition" title="Delete"><Trash2 size={12}/></button>}
@@ -543,6 +554,19 @@ export default function ClientsPage() {
                   <option value="INACTIVE">Inactive</option>
                 </select>
               </Field>
+              {/* Read-only timestamps — shown only when editing */}
+              {!isNew && (modal as Partial<Client>).createdAt && (
+                <div className="md:col-span-2 grid grid-cols-2 gap-3 pt-1 border-t border-gray-100 dark:border-gray-700">
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Created At</p>
+                    <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<Client>).createdAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Today&apos;s Date</p>
+                    <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs(new Date().toISOString())}</p>
+                  </div>
+                </div>
+              )}
               <div className="md:col-span-2 flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
                 <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
                 <button type="submit" disabled={saving} className="btn-primary">

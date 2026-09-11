@@ -28,6 +28,16 @@ function downloadBlob(blob: Blob, filename: string) {
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
+
+/** Format any date string as YYYY-MM-DD HH:MM:SS */
+function fmtTs(d?: string | null): string {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "—";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} ` +
+         `${p(dt.getHours())}:${p(dt.getMinutes())}:${p(dt.getSeconds())}`;
+}
 const BRAND = "Generated using Civi API | By Civitas Atlas Co, Pune";
 async function xlsxExport(rows: Record<string, unknown>[], sheet: string, file: string) {
   const XLSX = await import("xlsx");
@@ -80,7 +90,7 @@ function StockBar({ qty, minStock, maxQty }: { qty: number; minStock: number; ma
     </div>
   );
 }
-const EMPTY: Omit<FinishedProduct, "id" | "stockStatus"> = {
+const EMPTY: Omit<FinishedProduct, "id" | "stockStatus" | "createdAt" | "updatedAt"> = {
   name: "", qty: 0, unit: "Box", category: "Finished Products",
   location: null, supplier: null, minStock: 0, price: 0, status: "ACTIVE",
 };
@@ -333,6 +343,8 @@ export default function FinishedProductsPage() {
     Supplier: p.supplier ?? "", "Min Stock": p.minStock,
     "Price (₹)": p.price, "Stock Value (₹)": p.qty * p.price,
     Status: p.status, "Stock Status": p.stockStatus,
+    "Created At":  fmtTs(p.createdAt),
+    "Updated At":  fmtTs(p.updatedAt),
   }));
 
   function exportCsv() {
@@ -531,6 +543,7 @@ export default function FinishedProductsPage() {
                 )}
 
                 <StockBar qty={p.qty} minStock={p.minStock ?? 0} maxQty={maxQty} />
+                <p className="text-[10px] text-gray-400 font-mono mt-1">Updated: {fmtTs(p.updatedAt)}</p>
 
                 {/* ── Action row ── */}
                 <div className="flex flex-wrap gap-1.5 mt-3">
@@ -577,6 +590,8 @@ export default function FinishedProductsPage() {
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Stock Value</th>
                     <TH col="stockStatus" label="Stock"     />
                     <TH col="status"      label="Status"    />
+                    <TH col="createdAt"   label="Created At"  />
+                    <TH col="updatedAt"   label="Updated At"  />
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
@@ -593,6 +608,8 @@ export default function FinishedProductsPage() {
                       <td className="font-semibold">₹{(p.qty*(p.price??0)).toLocaleString("en-IN")}</td>
                       <td><StockBadge s={p.stockStatus} /></td>
                       <td><StatusBadge status={p.status} /></td>
+                      <td className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono">{fmtTs(p.createdAt)}</td>
+                      <td className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono">{fmtTs(p.updatedAt)}</td>
                       <td>
                         <div className="flex gap-1 flex-wrap">
                           {canEdit && <>
@@ -673,6 +690,23 @@ export default function FinishedProductsPage() {
                       <option value="HOLD">Hold</option>
                     </select>
                   </Field>
+                  {/* Read-only timestamps — shown only when editing */}
+                  {!isNew && ((modal as Partial<FinishedProduct>).createdAt || (modal as Partial<FinishedProduct>).updatedAt) && (
+                    <div className="grid grid-cols-2 gap-3 pt-1 border-t border-gray-100 dark:border-gray-700">
+                      {(modal as Partial<FinishedProduct>).createdAt && (
+                        <div>
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Created At</p>
+                          <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<FinishedProduct>).createdAt)}</p>
+                        </div>
+                      )}
+                      {(modal as Partial<FinishedProduct>).updatedAt && (
+                        <div>
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Updated At</p>
+                          <p className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{fmtTs((modal as Partial<FinishedProduct>).updatedAt)}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-100 dark:border-gray-700 shrink-0">
                   <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>

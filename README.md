@@ -104,14 +104,17 @@ Open **http://localhost:3000** and login.
 - **Raw Materials** — CRUD, inward/outward stock, Excel import, PDF export
 - **Finished Products** — CRUD, manufacture from BOM, stock tracking
 - **Bill of Materials** — define components per product, feasibility check
+- **Manufacture** — atomic BOM deduction, produce runs, transaction history
 - **Clients** — CRUD, Excel import, export
 - **IoT Devices** — device registry, ping status tracking
 - **Dashboard** — live stats, stock value, cost analysis, charts
-- **Activity Log** — full audit trail per user action
+- **Activity Log** — full audit trail per user action with timestamps
 - **Reports** — multi-tab, date filter, CSV / Excel / PDF
 - **Civi AI** — inventory intelligence, reorder alerts, manufacture readiness, AI chat
 - **User Management** — ADMIN / EDITOR / VIEWER roles, permission matrix
-- **Trial / License** — key-based expiry system
+- **Timestamps** — all exports and tables show `YYYY-MM-DD HH:MM:SS` consistently
+
+See **FEATURES.md** for the complete feature reference.
 
 ---
 
