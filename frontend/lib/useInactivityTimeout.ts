@@ -14,7 +14,7 @@
 import { useEffect, useRef } from "react";
 import { logout } from "@/lib/api";
 
-const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 const ACTIVITY_EVENTS = [
   "mousemove",

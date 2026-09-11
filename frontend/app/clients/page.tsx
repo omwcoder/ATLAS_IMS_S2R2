@@ -121,8 +121,7 @@ const EMPTY: Omit<Client, "id" | "createdAt" | "updatedAt"> = {
 };
 
 export default function ClientsPage() {
-  const { canAdd, canEdit, canDelete } = usePermissions("client");
-  const isAdmin = typeof window !== "undefined" && localStorage.getItem("s2r2_role") === "ADMIN";
+  const { canAdd, canEdit, canDelete, isAdmin } = usePermissions("client");
   // ─── list state ────────────────────────────────────────────
   const [clients,  setClients]  = useState<Client[]>([]);
   const [filtered, setFiltered] = useState<Client[]>([]);

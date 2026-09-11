@@ -29,10 +29,17 @@ interface SidebarProps {
 
 function Sidebar({ open, collapsed, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const [role, setRole] = useState("");
+  // Read role immediately from localStorage (synchronous) so nav is correct on first render.
+  // Falls back to "" during SSR (no window) — AppShell only renders after mount so this is safe.
+  const [role, setRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("s2r2_role") || "";
+  });
 
   useEffect(() => {
-    setRole(localStorage.getItem("s2r2_role") || "");
+    // Re-read after mount in case localStorage was set between SSR and hydration
+    const stored = localStorage.getItem("s2r2_role") || "";
+    setRole(stored);
   }, []);
 
   const NAV_ITEMS = BASE_NAV.filter(item =>

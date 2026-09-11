@@ -3,7 +3,7 @@
 // Used by every page to decide whether to show/hide add, edit, delete buttons.
 
 "use client";
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 
 // ── Feature keys must match the "feature" strings in admin/page.tsx ──────────
 export type PermFeature =
@@ -82,59 +82,74 @@ export function can(feature: PermFeature): boolean {
 
 /**
  * usePermissions — React hook that returns permission flags for a given module.
- * Re-reads from localStorage on every render so changes in Admin Panel
- * take effect immediately without a page reload.
+ * Uses useState + useEffect so it re-reads from localStorage AFTER mount,
+ * ensuring the role is always available (even for EDITOR/VIEWER logins).
  */
 export function usePermissions(module: "raw-material" | "finished-product" | "client" | "iot-device") {
-  return useMemo(() => {
-    const role = getRole();
-    const isAdmin = role === "ADMIN";
+  // Synchronously read localStorage on the client — no flash, no SSR errors.
+  // AppShell only renders children after mount (when !mounted returns null),
+  // so by the time this hook runs, localStorage always has the role.
+  const [perms, setPerms] = useState<ReturnType<typeof computePerms>>(() =>
+    typeof window === "undefined"
+      ? { isAdmin: false, role: "", canAdd: false, canEdit: false, canDelete: false, canExport: false }
+      : computePerms(module)
+  );
 
-    // Map module → feature names
-    const featureMap: Record<typeof module, {
-      add:    PermFeature;
-      edit:   PermFeature;
-      delete: PermFeature;
-      export: PermFeature;
-    }> = {
-      "raw-material": {
-        add:    "Add Raw Materials",
-        edit:   "Edit Raw Materials",
-        delete: "Delete Raw Materials",
-        export: "Export CSV / Excel / PDF",
-      },
-      "finished-product": {
-        add:    "Add Finished Products",
-        edit:   "Edit Finished Products",
-        delete: "Delete Finished Products",
-        export: "Export CSV / Excel / PDF",
-      },
-      "client": {
-        add:    "Add / Edit Clients",
-        edit:   "Add / Edit Clients",
-        delete: "Delete Clients",
-        export: "Export CSV / Excel / PDF",
-      },
-      "iot-device": {
-        add:    "Add / Edit IoT Devices",
-        edit:   "Add / Edit IoT Devices",
-        delete: "Delete IoT Devices",
-        export: "Export CSV / Excel / PDF",
-      },
-    };
-
-    const f = featureMap[module];
-
-    return {
-      isAdmin,
-      role,
-      canAdd:    can(f.add),
-      canEdit:   can(f.edit),
-      canDelete: can(f.delete),
-      canExport: can(f.export),
-    };
+  useEffect(() => {
+    // Re-read after hydration in case the lazy initializer ran server-side
+    setPerms(computePerms(module));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // intentionally no deps — reads fresh on each render via localStorage
+  }, []);
+
+  return perms;
+}
+
+function computePerms(module: "raw-material" | "finished-product" | "client" | "iot-device") {
+  const role    = getRole();
+  const isAdmin = role === "ADMIN";
+
+  const featureMap: Record<typeof module, {
+    add:    PermFeature;
+    edit:   PermFeature;
+    delete: PermFeature;
+    export: PermFeature;
+  }> = {
+    "raw-material": {
+      add:    "Add Raw Materials",
+      edit:   "Edit Raw Materials",
+      delete: "Delete Raw Materials",
+      export: "Export CSV / Excel / PDF",
+    },
+    "finished-product": {
+      add:    "Add Finished Products",
+      edit:   "Edit Finished Products",
+      delete: "Delete Finished Products",
+      export: "Export CSV / Excel / PDF",
+    },
+    "client": {
+      add:    "Add / Edit Clients",
+      edit:   "Add / Edit Clients",
+      delete: "Delete Clients",
+      export: "Export CSV / Excel / PDF",
+    },
+    "iot-device": {
+      add:    "Add / Edit IoT Devices",
+      edit:   "Add / Edit IoT Devices",
+      delete: "Delete IoT Devices",
+      export: "Export CSV / Excel / PDF",
+    },
+  };
+
+  const f = featureMap[module];
+
+  return {
+    isAdmin,
+    role,
+    canAdd:    can(f.add),
+    canEdit:   can(f.edit),
+    canDelete: can(f.delete),
+    canExport: can(f.export),
+  };
 }
 
 /**

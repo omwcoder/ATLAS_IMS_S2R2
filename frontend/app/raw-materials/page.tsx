@@ -106,8 +106,7 @@ type ImportRow = Record<string, unknown>;
 type ImportState = "idle" | "preview" | "importing" | "done";
 
 export default function RawMaterialsPage() {
-  const { canAdd, canEdit, canDelete } = usePermissions("raw-material");
-  const isAdmin = typeof window !== "undefined" && localStorage.getItem("s2r2_role") === "ADMIN";
+  const { canAdd, canEdit, canDelete, isAdmin } = usePermissions("raw-material");
   const [items,    setItems]    = useState<RawMaterial[]>([]);
   const [filtered, setFiltered] = useState<RawMaterial[]>([]);
   const [search,   setSearch]   = useState("");

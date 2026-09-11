@@ -120,8 +120,7 @@ type ActionModal =
   | { type: "manufacture"; product: FinishedProduct };
 
 export default function FinishedProductsPage() {
-  const { canAdd, canEdit, canDelete } = usePermissions("finished-product");
-  const isAdmin = typeof window !== "undefined" && localStorage.getItem("s2r2_role") === "ADMIN";
+  const { canAdd, canEdit, canDelete, isAdmin } = usePermissions("finished-product");
   const [products,     setProducts]     = useState<FinishedProduct[]>([]);
   const [filtered,     setFiltered]     = useState<FinishedProduct[]>([]);
   const [search,       setSearch]       = useState("");
