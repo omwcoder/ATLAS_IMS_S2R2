@@ -15,7 +15,8 @@ frontend/.next/
 frontend/out/
 
 # ── Prisma ───────────────────────────────────────────────────
-backend/prisma/migrations/**/migration_lock.toml
+# migration files should be committed — only exclude generated files
+backend/prisma/generated/
 
 # ── Logs ─────────────────────────────────────────────────────
 *.log
